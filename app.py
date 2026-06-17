@@ -1414,10 +1414,38 @@ SECTION_LABEL_CHATBOT = """
 </div>
 """
 
+NOTICE_HTML = """
+<div style="max-width: 760px; margin: 0 auto 24px; padding: 16px 22px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.06) 0%, rgba(212, 175, 55, 0.02) 100%); border: 0.5px solid rgba(212, 175, 55, 0.25); border-left: 2.5px solid #D4AF37; border-radius: 6px;">
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+        <span style="font-size: 11px; letter-spacing: 0.2em; color: #D4AF37; text-transform: uppercase; font-weight: 600;">
+            ⓘ KRX API 데이터 안내
+        </span>
+        <div style="flex: 1; height: 0.5px; background: rgba(212, 175, 55, 0.2);"></div>
+    </div>
+    <p style="margin: 0 0 10px; color: #CBD5E1; font-size: 12.5px; line-height: 1.7;">
+        모든 데이터는 <strong style="color: #F1F5F9;">전일 데이터 기준</strong>이며, 
+        익일 영업일 <strong style="color: #D4AF37;">오전 8시</strong>에 업데이트됩니다.
+    </p>
+    <div style="margin: 6px 0 0; padding-left: 14px; border-left: 0.5px solid #1F2937;">
+        <p style="margin: 0 0 4px; color: #94A3B8; font-size: 11.5px; line-height: 1.7;">
+            <span style="color: #64748B;">예시 1.</span> 
+            <span style="color: #CBD5E1;">4월 28일</span> 데이터 → 
+            <span style="color: #CBD5E1;">4월 29일 오전 8시</span>부터 조회 가능
+        </p>
+        <p style="margin: 0; color: #94A3B8; font-size: 11.5px; line-height: 1.7;">
+            <span style="color: #64748B;">예시 2.</span> 
+            <span style="color: #CBD5E1;">금요일</span> 데이터 → 
+            다음 영업일 <span style="color: #CBD5E1;">월요일 오전 8시</span>부터 조회 가능
+        </p>
+    </div>
+</div>
+"""
+
 
 with gr.Blocks(title="코스피 옵션 AI 브리핑") as demo:
     
     gr.HTML(HEADER_HTML)
+    gr.HTML(NOTICE_HTML)
     
     # 날짜 입력 → 조회 버튼 → 진행 표시 (세로 배치)
     date_input = gr.Textbox(
