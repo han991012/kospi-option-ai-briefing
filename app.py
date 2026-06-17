@@ -365,6 +365,19 @@ def build_chatbot_system_prompt(stats_state):
     return base
 
 
+def filter_options_by_name(query, full_df):
+    """전체 옵션 표에서 종목명에 검색어가 포함된 행만 반환한다."""
+    if full_df is None:
+        return None
+    if not query or not query.strip():
+        return full_df
+    
+    query = query.strip()
+    # "종목명" 컬럼에 검색어 포함된 행만 (대소문자 무관)
+    filtered = full_df[full_df["종목명"].astype(str).str.contains(query, case=False, na=False)]
+    return filtered
+
+
 def chat_respond(message, history, stats_state):
     """챗봇 응답 함수. dict 형식의 history를 받아 OpenAI API를 호출한다."""
     if not message or not message.strip():
@@ -398,8 +411,9 @@ def chat_respond(message, history, stats_state):
                 temperature=0.5,
                 timeout=20,
             )
-
+            
             # 응답 content를 안전하게 string으로 변환
+            # (OpenAI API가 가끔 list of dict 형태로 반환할 수 있음)
             raw_content = response.choices[0].message.content
             if isinstance(raw_content, list):
                 parts = []
@@ -661,7 +675,7 @@ def run_analysis(date_input):
     yield (
         gr.update(value=render_status_html("🔄 조회 준비 중...", 5), visible=True),
         gr.update(visible=False),
-        gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+        gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
     )
     
     if not date_input or not date_input.strip():
@@ -678,7 +692,7 @@ def run_analysis(date_input):
                     visible=True,
                 ),
                 gr.update(visible=False),
-                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
             )
             return
     
@@ -698,7 +712,7 @@ def run_analysis(date_input):
                 yield (
                     gr.update(value=render_status_html(status_msg, 20), visible=True),
                     gr.update(visible=False),
-                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+                    gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
                 )
                 
                 timeout_sec = 30 + (attempt * 15)
@@ -739,7 +753,7 @@ def run_analysis(date_input):
         yield (
             gr.update(value=render_status_html("📊 옵션 통계 계산 중 (콜·풋·TOP 5)...", 45), visible=True),
             gr.update(visible=False),
-            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
         )
         stats = calculate_statistics(df)
         summary_html = render_summary_html(date_str, stats)
@@ -758,7 +772,7 @@ def run_analysis(date_input):
         yield (
             gr.update(value=render_status_html("🤖 GPT-4o-mini로 AI 시황 리포트 생성 중...", 65), visible=True),
             gr.update(visible=False),
-            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
         )
         report_text = generate_ai_report(date_str, stats)
         report_html = render_report_html(date_str, report_text)
@@ -766,11 +780,11 @@ def run_analysis(date_input):
         yield (
             gr.update(value=render_status_html("📄 PDF 리포트 생성 중...", 90), visible=True),
             gr.update(visible=False),
-            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
         )
         pdf_path = generate_pdf(date_str, stats, report_text)
         
-        # 완료 — 진행 표시 숨기고 결과 표시 + 챗봇용 stats_state 업데이트
+        # 완료 — 진행 표시 숨기고 결과 표시 + 챗봇용 stats_state 업데이트 + 검색용 full_df 저장
         yield (
             gr.update(value="", visible=False),
             gr.update(visible=True),
@@ -779,6 +793,7 @@ def run_analysis(date_input):
             report_html,
             pdf_path,
             {"loaded": True, "date_str": date_str, "stats": stats},
+            full_df,
         )
     
     except Exception as e:
@@ -788,7 +803,7 @@ def run_analysis(date_input):
                 visible=True,
             ),
             gr.update(visible=False),
-            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
+            gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(),
         )
 
 
@@ -1217,6 +1232,33 @@ div.block.dark-chatbot .bubble-wrap {
     font-weight: 600 !important;
 }
 
+/* ============ 검색 입력란 (전체 옵션 데이터 위) ============ */
+.dark-search-input {
+    margin-bottom: 14px !important;
+}
+
+.dark-search-input input,
+.dark-search-input textarea {
+    background: #131A26 !important;
+    border: 0.5px solid #1F2937 !important;
+    color: #F1F5F9 !important;
+    border-radius: 6px !important;
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+}
+
+.dark-search-input input:focus,
+.dark-search-input textarea:focus {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+    outline: none !important;
+}
+
+.dark-search-input input::placeholder,
+.dark-search-input textarea::placeholder {
+    color: #64748B !important;
+}
+
 .dark-chat-input textarea {
     background: #131A26 !important;
     border: 0.5px solid #1F2937 !important;
@@ -1397,6 +1439,13 @@ with gr.Blocks(title="코스피 옵션 AI 브리핑") as demo:
         
         # 전체 옵션 데이터
         gr.HTML(SECTION_LABEL_FULL)
+        search_input = gr.Textbox(
+            label="SEARCH",
+            placeholder="🔍 종목명 검색 (예: 위클리M / 1417.5 / 코스피200 등)",
+            lines=1,
+            max_lines=1,
+            elem_classes="dark-search-input",
+        )
         full_table = gr.Dataframe(
             label=None,
             interactive=False,
@@ -1441,11 +1490,26 @@ with gr.Blocks(title="코스피 옵션 AI 브리핑") as demo:
     # 챗봇이 사용할 stats State (세션별 격리)
     stats_state = gr.State(value={"loaded": False, "date_str": "", "stats": {}})
     
+    # 검색 기능용 — 전체 옵션 df 저장 (세션별 격리)
+    full_df_state = gr.State(value=None)
+    
     run_btn.click(
         fn=run_analysis,
         inputs=[date_input],
-        outputs=[status_output, result_group, summary_output, full_table, report_output, pdf_file, stats_state],
+        outputs=[status_output, result_group, summary_output, full_table, report_output, pdf_file, stats_state, full_df_state],
         show_progress="hidden",
+    ).then(
+        # 새 조회 시 검색창 자동 초기화 (이전 검색어 남아있지 않게)
+        fn=lambda: "",
+        inputs=None,
+        outputs=[search_input],
+    )
+    
+    # 종목명 검색 이벤트
+    search_input.change(
+        fn=filter_options_by_name,
+        inputs=[search_input, full_df_state],
+        outputs=[full_table],
     )
     
     # 챗봇 이벤트
