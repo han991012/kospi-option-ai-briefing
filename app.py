@@ -398,7 +398,21 @@ def chat_respond(message, history, stats_state):
                 temperature=0.5,
                 timeout=20,
             )
-            answer = response.choices[0].message.content
+
+            # 응답 content를 안전하게 string으로 변환
+            raw_content = response.choices[0].message.content
+            if isinstance(raw_content, list):
+                parts = []
+                for item in raw_content:
+                    if isinstance(item, dict):
+                        parts.append(item.get("text", ""))
+                    else:
+                        parts.append(str(item))
+                answer = "".join(parts).strip()
+            elif isinstance(raw_content, str):
+                answer = raw_content
+            else:
+                answer = str(raw_content) if raw_content else ""
             
             # dict 형식으로 history 업데이트
             history = history + [
